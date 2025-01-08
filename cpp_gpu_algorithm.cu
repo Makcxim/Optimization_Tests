@@ -16,10 +16,20 @@ __device__ bool is_prime(uint64_t n) {
 }
 
 // __device__ функция для проверки, имеет ли число ровно 5 делителей
-__device__ bool is_needed(uint64_t n) {
-    double sqrt_root = pow((double)n, 1.0 / 4.0);
-    if (floor(sqrt_root) == sqrt_root && is_prime((uint64_t)sqrt_root)) {
-        return true;
+__device__ bool is_needed(uint64_t number) {
+    double fourth_root = pow((double)number, 1.0 / 4.0);
+    // llround округлит double к ближайшему целому (long long).
+    uint64_t rounded_root = (uint64_t)llround(fourth_root);
+
+    // Для подстраховки проверим rounded_candidate и его +-1 (вдруг из-за неточности немного промахнёмся).
+    for (int near_step = -1; near_step <= 1; near_step++) {
+        uint64_t near_root = rounded_root + near_step;
+        if (near_root > 1) {
+            uint64_t candidate = near_root * near_root * near_root * near_root;
+            if (candidate == number && is_prime(near_root)) {
+                return true;
+            }
+        }
     }
     return false;
 }
@@ -53,7 +63,7 @@ int main() {
 
     // Выравнивание начала диапазона
     uint64_t adjusted_start = start - start % 240 + 1;
-    uint64_t total_steps = (end - adjusted_start) / 240;
+    uint64_t total_steps = (end - adjusted_start) / 240 + 1;
 
     // Выделение памяти на устройстве
     cudaMalloc(&d_results, max_results * sizeof(uint64_t));
